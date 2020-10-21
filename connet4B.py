@@ -1,10 +1,11 @@
 # connect 4
+#TODO: Change things so that it wins. It looks like it wins too fast though and that might be a problem
 
 import copy
 import sys
 MINUS_INFINITY=-10000000
 POSITIVE_INFINITY=10000000
-Dmax = 5
+Dmax = 4
 Tmax = 5
 
 class Node(object):
@@ -57,6 +58,8 @@ class agentC4(object):
                         #Move with action list
                         mwal = [spacenum, newboard]
                         actions.append(mwal)
+                    elif rownum == 0:
+                        saf[spacenum] = 1
 
                 #If there is no topmost add it here
                 elif space == 0 and rownum == 5:
@@ -92,9 +95,9 @@ class agentC4(object):
         depth += 1
 
         if (depth >= Dmax):
-            evaluate = self.H1(board, player)
+            evaluate = evaluate = self.H1(board, 1)
 
-            print(evaluate)
+            #print(evaluate)
 
             #print("Board: ")
             #print(board)
@@ -106,9 +109,6 @@ class agentC4(object):
         
         #Action with move list
         awml = self.availableActions(board, player)
-
-        if (len(awml) != 7):
-            print("bad")
 
         val = MINUS_INFINITY
         #Action with move
@@ -125,7 +125,7 @@ class agentC4(object):
 
             if val2 > val:
                 val = val2
-                move = move2
+                move = nextmove
                 alpha = max([val, alpha])
 
             if val >= beta:
@@ -142,9 +142,9 @@ class agentC4(object):
         depth += 1
 
         if (depth >= Dmax):
-            evaluate = self.H1(board, player)
+            evaluate = self.H1(board, 1) - (2 * self.H1(board, 2))
 
-            print(evaluate)
+            #print(evaluate)
 
             #print("Board: ")
             #print(board)
@@ -157,9 +157,6 @@ class agentC4(object):
         #Action with move list
         #print(board)
         awml = self.availableActions(board, player)
-
-        if (len(awml) != 7):
-            print("bad")
 
         val = POSITIVE_INFINITY
         
@@ -177,7 +174,7 @@ class agentC4(object):
 
             if val2 < val:
                 val = val2
-                move = move2
+                move = nextmove
                 beta = min([val, beta])
 
             if val <= alpha:
@@ -189,9 +186,9 @@ class agentC4(object):
         #This H is for determining the value based on all connections
         #The scores are based on this:
             #1 is nothing
-            #2 is 1
-            #3 is 3
-            #4 is 6 (May also be caught by the terminal check)
+            #2 is 4
+            #3 is 16
+            #4 is 164
         
         #This is used to make sure it doesnt check the same path twice
         checkb = [[0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0],
@@ -203,16 +200,20 @@ class agentC4(object):
 
                 if space != 0 and space == player:
                     hor = True
+                    horval = 1
                     ver = True
+                    verval = 1
                     diagr = True
+                    diagrval = 1
                     diagl = True
+                    diaglval = 1
                     
                     for i in range(1, 4):
                         try:
                             if board[rownum][spacenum + i] != space:
                                 hor = False
                             elif hor:
-                                value += 1
+                                horval *= 4
                         except:
                             hor = False
 
@@ -220,7 +221,7 @@ class agentC4(object):
                             if board[rownum + i][spacenum] != space:
                                 ver = False
                             elif ver:
-                                value += 1
+                                verval *= 4
                         except:
                             ver = False
 
@@ -228,7 +229,7 @@ class agentC4(object):
                             if board[rownum + i][spacenum - i] != space or spacenum - 1 < 0:
                                 diagr = False
                             elif diagr:
-                                value += 1
+                                diagrval *= 4
                         except:
                             diagr = False
 
@@ -236,10 +237,33 @@ class agentC4(object):
                             if board[rownum + i][spacenum + i] != space:
                                 diagl = False
                             elif diagr:
-                                value += 1
+                                diaglval *= 4
                         except:
                             diagl = False
-                
+
+                    if hor:
+                        value += 100
+
+                    if ver:
+                        value += 100
+
+                    if diagl:
+                        value += 100
+
+                    if diagr:
+                        value += 100
+
+                    if horval != 1:
+                        value += horval
+
+                    if verval != 1:
+                        value += verval
+
+                    if diagrval != 1:
+                        value += diagrval
+
+                    if diaglval != 1:
+                        value += diaglval
 
         return value
 
@@ -252,8 +276,11 @@ class agentC4(object):
 
 class gameC4(object):
     def __init__(self):
-        self.board=[[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],
-                    [0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]]
+        #self.board = [[2,2,2,0,2,2,1],[1,1,1,0,1,1,1],[2,2,2,0,2,2,1],
+         #           [2,1,2,0,1,1,2],[2,1,1,0,2,1,1],[1,2,1,0,2,2,1]]
+        # Good board
+        self.board = [[0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0],
+                     [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0]]
 
     #the move
     def drop(self,player,column):
@@ -299,6 +326,9 @@ class Full(Exception):
 def checkWin(game):
     #This checks to see if someone has won
 
+    #This checks to see if the board is full and it is a stalemate
+    stale = True
+
     #This is the board we will be checking
     board = copy.deepcopy(game)
     
@@ -306,6 +336,9 @@ def checkWin(game):
     for rownum in range(0, len(board)):
         for spacenum in range(0, len(board[rownum])):
             space = board[rownum][spacenum]
+
+            if space == 0 and stale:
+                stale = False
 
             if space != 0:
 
@@ -341,6 +374,10 @@ def checkWin(game):
 
                 if hor or ver or diagl or diagr:
                     return space, True
+
+    if stale:
+        return -1, True
+
     return -1, False
 
 def main():
@@ -349,52 +386,91 @@ def main():
     C4=gameC4()
     
     player=["O","X"]
-    wgf = int(input("Who goes first? (1 for O, 2 for X) "))
+    aoh = input("AI vs or Human? ('a' or 'h') ")
+
     ply = 0
-    order = [0,0]
-    
-    if wgf == 1:
-        agent = agentC4(1)
-        order[0] = agent
-    elif wgf == 2:
-        agent = agentC4(2)
-        order[1] = agent
-        
-    while True:
-        cb=C4.getCurrentBoard()
 
-        C4.displayBoard()
-        print("Player " + str((ply%2) + 1) + " turn.")
+    if aoh == "h":
+        # Who goes first
+        wgf = int(input("Who goes first? (1 for O, 2 for X) "))
+        order = [0,0]
 
-        if order[ply%2] == 0:
-            good = False
-            try:
-                column = input("Enter a column to drop: ")
-                if (column == "exit"):
-                    return 0
-                column = int(column)
-                good = True
-            except ValueError:
-                print("That is not an allowed command")
+        if wgf == 1:
+            agent = agentC4(1)
+            order[0] = agent
+        elif wgf == 2:
+            agent = agentC4(2)
+            order[1] = agent
 
-            if good:
-                try:
-                    # here is the human X player (the maxmin player)
-                    C4.drop((ply%2) + 1,column)
-                    ply += 1
-                except Full:
-                    print("try again")
+        while True:
+            cb=C4.getCurrentBoard()
 
-        else:
-            C4.drop(agent.player, agent.getMove(C4.getCurrentBoard()))
-            ply += 1
-
-        player, terminal = checkWin(C4.getCurrentBoard())
-
-        if terminal:
             C4.displayBoard()
-            print(str(player) + " has won.")
-            break
+            print("Player " + str((ply%2) + 1) + " turn.")
+
+            if order[ply%2] == 0:
+                good = False
+                try:
+                    column = input("Enter a column to drop: ")
+                    if (column == "exit"):
+                        return 0
+                    column = int(column)
+                    good = True
+                except ValueError:
+                    print("That is not an allowed command")
+
+                if good:
+                    try:
+                        # here is the human X player (the maxmin player)
+                        C4.drop((ply%2) + 1,column)
+                        ply += 1
+                    except Full:
+                        print("try again")
+
+            else:
+                C4.drop(agent.player, agent.getMove(C4.getCurrentBoard()))
+                ply += 1
+
+            player, terminal = checkWin(C4.getCurrentBoard())
+
+            if terminal and player != -1:
+                C4.displayBoard()
+                print(str(player) + " has won.")
+                break
+            elif terminal and player == -1:
+                C4.displayBoard()
+                print("The board is a stalemate")
+                break
+
+    elif aoh == "a":
+        agent1 = agentC4(1)
+        agent2 = agentC4(2)
+
+        while True:
+            C4.displayBoard()
+
+            if (ply % 2) == 0:
+                C4.drop(agent1.player, agent1.getMove(C4.getCurrentBoard()))
+                ply += 1
+            else:
+                C4.drop(agent2.player, agent2.getMove(C4.getCurrentBoard()))
+                ply += 1
+
+            player, terminal = checkWin(C4.getCurrentBoard())
+
+            if terminal and player != -1:
+                C4.displayBoard()
+                print(str(player) + " has won.")
+                break
+            elif terminal and player == -1:
+                C4.displayBoard()
+                print("The board is a stalemate")
+                break
+
+
+
+
+
 
 def trialstuff():
     agent = agentC4(0)
@@ -403,14 +479,15 @@ def trialstuff():
     #board = [[0,0,0,0,0,0,0],[0,0,0,0,0,0,1],[0,0,0,0,0,0,2],
                     #[0,0,0,0,0,0,1],[1,0,0,0,0,0,1],[2,2,2,2,0,0,1]]
 
-    board = [[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[2,0,0,0,0,0,0],
-                    [1,0,0,0,0,0,0],[1,0,0,0,0,0,2],[1,1,0,0,0,0,2]]
+    board = [[2,2,2,0,2,2,1],[1,1,1,0,1,1,1],[2,2,2,0,2,2,1],
+                    [2,1,2,0,1,1,2],[2,1,1,0,2,1,1],[1,2,1,0,2,2,1]]
 
     game.board = board
     
     game.displayBoard()
 
-    print(agent.H1(board, 1))
+    #print(agent.H1(board, 1))
+    print(agent.availableActions(board, 1))
     
 if __name__=="__main__":
     main()
