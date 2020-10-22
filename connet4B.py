@@ -1,11 +1,15 @@
 # connect 4
 #TODO: Change things so that it wins. It looks like it wins too fast though and that might be a problem
+#TODO: Somehow got worse and now wont recognize terminal states. WTF
+#TODO: Loses to defense because it doesnt detect x * x * as a huge potential bad
+#TODO: Clean up h cause its not working at all. doesnt keep up with terminal state
+#TODO: Does well when it goes first. Can defend ok but needs to start in the middle more
 
 import copy
 import sys
 MINUS_INFINITY=-10000000
 POSITIVE_INFINITY=10000000
-Dmax = 4
+Dmax = 6
 Tmax = 5
 
 class Node(object):
@@ -95,7 +99,7 @@ class agentC4(object):
         depth += 1
 
         if (depth >= Dmax):
-            evaluate = evaluate = self.H1(board, 1)
+            evaluate = evaluation(board)
 
             #print(evaluate)
 
@@ -113,22 +117,28 @@ class agentC4(object):
         val = MINUS_INFINITY
         #Action with move
         for awm in awml:
+
             #Gets the next move
             nextmove = awm[0]
             
             #Gets the action
             action = awm[1]
 
+            p, t = checkWin(action)
+
+            if t:
+                return POSITIVE_INFINITY * 2, nextmove
+
             #print(action)
 
             val2, move2 = self.minval(action, alpha, beta, nextmove, depth, 2)
 
-            if val2 > val:
+            if val2 >= val:
                 val = val2
                 move = nextmove
                 alpha = max([val, alpha])
 
-            if val >= beta:
+            if val > beta:
                 return val, move
 
         return val, move
@@ -142,7 +152,7 @@ class agentC4(object):
         depth += 1
 
         if (depth >= Dmax):
-            evaluate = self.H1(board, 1) - (2 * self.H1(board, 2))
+            evaluate = evaluation(board)
 
             #print(evaluate)
 
@@ -168,116 +178,263 @@ class agentC4(object):
             #Gets the action
             action = awm[1]
 
+            p, t = checkWin(action)
+
+            if t:
+                return MINUS_INFINITY * 2, nextmove
+
             #print(action)
 
             val2, move2 = self.maxval(action, alpha, beta, nextmove, depth, 1)
 
-            if val2 < val:
+            if val2 <= val:
                 val = val2
                 move = nextmove
                 beta = min([val, beta])
 
-            if val <= alpha:
+            if val < alpha:
                 return val, move
 
         return val, move
 
-    def H1(self, board, player):
-        #This H is for determining the value based on all connections
-        #The scores are based on this:
-            #1 is nothing
-            #2 is 4
-            #3 is 16
-            #4 is 164
-        
-        #This is used to make sure it doesnt check the same path twice
-        checkb = [[0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0]]
-        value = 0
-        for rownum in range(0, len(board)):
-            for spacenum in range(0, len(board[rownum])):
-                space = board[rownum][spacenum]
+def H1(board, player):
+    #This H is for determining the value based on all connections
+    #The scores are based on this:
+        #1 is nothing
+        #2 is 4
+        #3 is 16
+        #4 is 164
 
-                if space != 0 and space == player:
-                    hor = True
-                    horval = 1
-                    ver = True
-                    verval = 1
-                    diagr = True
-                    diagrval = 1
-                    diagl = True
-                    diaglval = 1
-                    
-                    for i in range(1, 4):
-                        try:
-                            if board[rownum][spacenum + i] != space:
-                                hor = False
-                            elif hor:
-                                horval *= 4
-                        except:
+    #This is used to make sure it doesnt check the same path twice
+    checkb = [[0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0],
+              [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0]]
+    value = 0
+    for rownum in range(0, len(board)):
+        for spacenum in range(0, len(board[rownum])):
+            space = board[rownum][spacenum]
+
+            if space != 0 and space == player:
+                hor = True
+                horval = 1
+                ver = True
+                verval = 1
+                diagr = True
+                diagrval = 1
+                diagl = True
+                diaglval = 1
+
+                for i in range(1, 4):
+                    try:
+                        if board[rownum][spacenum + i] != space:
                             hor = False
+                        elif hor:
+                            horval *= 4
+                    except:
+                        hor = False
 
-                        try:
-                            if board[rownum + i][spacenum] != space:
-                                ver = False
-                            elif ver:
-                                verval *= 4
-                        except:
+                    try:
+                        if board[rownum + i][spacenum] != space:
                             ver = False
+                        elif ver:
+                            verval *= 4
+                    except:
+                        ver = False
 
-                        try:
-                            if board[rownum + i][spacenum - i] != space or spacenum - 1 < 0:
-                                diagr = False
-                            elif diagr:
-                                diagrval *= 4
-                        except:
+                    try:
+                        if board[rownum + i][spacenum - i] != space or spacenum - 1 < 0:
                             diagr = False
+                        elif diagr:
+                            diagrval *= 4
+                    except:
+                        diagr = False
 
-                        try:
-                            if board[rownum + i][spacenum + i] != space:
-                                diagl = False
-                            elif diagr:
-                                diaglval *= 4
-                        except:
+                    try:
+                        if board[rownum + i][spacenum + i] != space:
                             diagl = False
+                        elif diagr:
+                            diaglval *= 4
+                    except:
+                        diagl = False
 
-                    if hor:
-                        value += 100
+                if hor:
+                    value += 100
 
-                    if ver:
-                        value += 100
+                if ver:
+                    value += 100
 
-                    if diagl:
-                        value += 100
+                if diagl:
+                    value += 100
 
-                    if diagr:
-                        value += 100
+                if diagr:
+                    value += 100
 
-                    if horval != 1:
-                        value += horval
+                if horval != 1:
+                    value += horval
 
-                    if verval != 1:
-                        value += verval
+                if verval != 1:
+                    value += verval
 
-                    if diagrval != 1:
-                        value += diagrval
+                if diagrval != 1:
+                    value += diagrval
 
-                    if diaglval != 1:
-                        value += diaglval
+                if diaglval != 1:
+                    value += diaglval
 
-        return value
+    return value
 
-    def h2(self, board, player):
-        val = 0        
-        
-        return val
+def H2(b, player):
+    #This tries to find 3 in a row that can be completed from either side and if it can go for that
+
+    val = 0
+
+    board = copy.deepcopy(b)
+
+    # Three row list
+    trl = []
+
+    checknum = 3
+
+    for rownum in range(0, len(board)):
+        for spacenum in range(0, len(board[rownum])):
+            space = board[rownum][spacenum]
+
+            hor = True
+
+            ver = True
+
+            diagr = True
+
+            diagl = True
+
+            if (space != 0 and space == player) or space >= 3:
+                board[rownum][spacenum] = checknum
+
+                for i in range(1, 3):
+                    try:
+                        nextspace = board[rownum][spacenum + i]
+                        if nextspace == player or (nextspace >= 3 and not nextspace == space):
+                            board[rownum][spacenum + i] = checknum
+                        else:
+                            hor = False
+                    except:
+                        hor = False
+
+                    try:
+                        nextspace = board[rownum + i][spacenum + i]
+                        if nextspace == player or (nextspace >= 3 and not nextspace == space):
+                            board[rownum + i][spacenum + i] = checknum
+                        else:
+                            diagl = False
+                    except:
+                        diagl = False
+
+                    try:
+                        if spacenum - i >= 0:
+                            nextspace = board[rownum + i][spacenum - i]
+                            if nextspace == player or (nextspace >= 3 and not nextspace == space):
+                                board[rownum + i][spacenum - i] = checknum
+                            else:
+                                diagr = False
+                        else:
+                            diagr = False
+                    except:
+                        diagr = False
+
+                if hor:
+                    trl.append([0, rownum, spacenum])
+                if diagl:
+                    trl.append([1, rownum, spacenum])
+                if diagr:
+                    trl.append([2, rownum, spacenum])
+
+                checknum += 1
+
+    for item in trl:
+        # type
+        t = item[0]
+
+        # rownum
+        rn = item[1]
+
+        # spacenum
+        sn = item[2]
+
+        # Horizontal
+        if t == 0:
+            good = True
+            if sn - 1 >= 0:
+                backspace = board[rn][sn - 1]
+                if backspace != 0:
+                    good = False
+                try:
+                    frontspace = board[rn][sn + 3]
+                    if frontspace != 0:
+                        good = False
+                except:
+                    good = False
+            else:
+                good = False
+
+            if good:
+                val += 300
+
+        # Diag Right
+        if t == 1:
+            good = True
+            if sn - 3 >= 0:
+                try:
+                    backspace = board[rn + 3][sn - 3]
+                    if backspace != 0:
+                        good = False
+                except:
+                    good = False
+                if rn - 1 >= 0:
+                    try:
+                        frontspace = board[rn - 1][sn + 1]
+                        if frontspace != 0:
+                            good = False
+                    except:
+                        good = False
+                else:
+                    good = False
+            else:
+                good = False
+
+            if good:
+                val += 300
+
+        # Diag Left
+        if t == 2:
+            good = True
+            if sn - 1 >= 0 and rn - 1 >= 0:
+                backspace = board[rn - 1][sn - 1]
+                if backspace != 0:
+                    good = False
+
+                try:
+                    frontspace = board[rn + 3][sn + 3]
+                    if frontspace != 0:
+                        good = False
+                except:
+                    good = False
+            else:
+                good = False
+
+            if good:
+                val += 300
+
+
+    return val
+
+def evaluation(board):
+    return (H1(board, 1) + H2(board, 1)) - 2 * (H1(board, 2) + H2(board, 2))
         
 
 
 class gameC4(object):
     def __init__(self):
-        #self.board = [[2,2,2,0,2,2,1],[1,1,1,0,1,1,1],[2,2,2,0,2,2,1],
-         #           [2,1,2,0,1,1,2],[2,1,1,0,2,1,1],[1,2,1,0,2,2,1]]
+        #self.board = [[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,2,0,0],
+         #           [0,0,0,0,1,2,0],[0,2,1,2,1,1,2],[0,2,2,1,2,1,1]]
         # Good board
         self.board = [[0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0],
                      [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0]]
@@ -361,7 +518,10 @@ def checkWin(game):
                         ver = False
 
                     try:
-                        if board[rownum + i][spacenum - i] != space:
+                        if spacenum - i >= 0:
+                            if board[rownum + i][spacenum - i] != space:
+                                diagr = False
+                        else:
                             diagr = False
                     except:
                         diagr = False
@@ -476,18 +636,18 @@ def trialstuff():
     agent = agentC4(0)
     game = gameC4()
 
-    #board = [[0,0,0,0,0,0,0],[0,0,0,0,0,0,1],[0,0,0,0,0,0,2],
-                    #[0,0,0,0,0,0,1],[1,0,0,0,0,0,1],[2,2,2,2,0,0,1]]
+    board = [[0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 2, 2, 0, 0], [0, 0, 0, 1, 1, 2, 0], [0, 2, 1, 2, 1, 1, 2], [0, 2, 2, 1, 2, 1, 1]]
 
-    board = [[2,2,2,0,2,2,1],[1,1,1,0,1,1,1],[2,2,2,0,2,2,1],
-                    [2,1,2,0,1,1,2],[2,1,1,0,2,1,1],[1,2,1,0,2,2,1]]
+    #board = [[2,2,2,0,2,2,1],[1,1,1,0,1,1,1],[2,2,2,0,2,2,1],
+                    #[2,1,2,0,1,1,2],[2,1,1,0,2,1,1],[1,2,1,0,2,2,1]]
 
     game.board = board
     
     game.displayBoard()
 
-    #print(agent.H1(board, 1))
-    print(agent.availableActions(board, 1))
+    #print(agent.H2(board, 2))
+    #print(agent.availableActions(board, 1))
+    print(checkWin(board))
     
 if __name__=="__main__":
     main()
