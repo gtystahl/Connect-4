@@ -1,6 +1,5 @@
 # connect 4
 #TODO: Change things so that it wins. It looks like it wins too fast though and that might be a problem
-#TODO: Somehow got worse and now wont recognize terminal states. WTF
 #TODO: Loses to defense because it doesnt detect x * x * as a huge potential bad
 #TODO: Clean up h cause its not working at all. doesnt keep up with terminal state
 #TODO: Does well when it goes first. Can defend ok but needs to start in the middle more
@@ -34,6 +33,11 @@ class agentC4(object):
             move = self.minmax(board, self.player)
         else:
             print("There is an initialization problem")
+
+        if move == -1:
+            actions = self.availableActions(board, self.player)
+            if len(actions) == 1:
+                move = actions[0][0]
 
         return move
 
@@ -99,7 +103,7 @@ class agentC4(object):
         depth += 1
 
         if (depth >= Dmax):
-            evaluate = evaluation(board)
+            evaluate = evaluation(board, move)
 
             #print(evaluate)
 
@@ -152,7 +156,7 @@ class agentC4(object):
         depth += 1
 
         if (depth >= Dmax):
-            evaluate = evaluation(board)
+            evaluate = evaluation(board, move)
 
             #print(evaluate)
 
@@ -227,7 +231,7 @@ def H1(board, player):
                     try:
                         if board[rownum][spacenum + i] != space:
                             hor = False
-                        elif hor:
+                        elif board[rownum][spacenum + i] == space or board[rownum][spacenum + i] == 0:
                             horval *= 4
                     except:
                         hor = False
@@ -235,7 +239,7 @@ def H1(board, player):
                     try:
                         if board[rownum + i][spacenum] != space:
                             ver = False
-                        elif ver:
+                        elif board[rownum + i][spacenum] == space or board[rownum + i][spacenum] == 0:
                             verval *= 4
                     except:
                         ver = False
@@ -243,7 +247,7 @@ def H1(board, player):
                     try:
                         if board[rownum + i][spacenum - i] != space or spacenum - 1 < 0:
                             diagr = False
-                        elif diagr:
+                        elif (board[rownum + i][spacenum - i] == space or board[rownum + i][spacenum - i] == 0) and spacenum - 1 >= 0:
                             diagrval *= 4
                     except:
                         diagr = False
@@ -251,7 +255,7 @@ def H1(board, player):
                     try:
                         if board[rownum + i][spacenum + i] != space:
                             diagl = False
-                        elif diagr:
+                        elif board[rownum + i][spacenum + i] == space or board[rownum + i][spacenum + i] == 0:
                             diaglval *= 4
                     except:
                         diagl = False
@@ -426,8 +430,43 @@ def H2(b, player):
 
     return val
 
-def evaluation(board):
-    return (H1(board, 1) + H2(board, 1)) - 2 * (H1(board, 2) + H2(board, 2))
+def H3(board, move):
+    val = 0
+    change = 5
+    
+    space = -1
+    for rownum in range(0, len(board)):
+        space = board[rownum][move]
+        if space != 0:
+            break
+
+    try:
+        nextspace = board[rownum + 1][move]
+        if (nextspace == 0):
+            val += change
+    except:
+        val += 0
+
+    try:
+        nextspace = board[rownum][move + 1]
+        if (nextspace == 0):
+            val += change
+    except:
+        val += 0
+
+    if move - 1 >= 0:
+        nextspace = board[rownum][move - 1]
+        if nextspace == 0:
+            val += change
+
+
+        
+        
+    return val
+
+
+def evaluation(board, move):
+    return (H1(board, 1) + H2(board, 1) + H3(board, move)) - 2 * (H1(board, 2) + H2(board, 2))
         
 
 
@@ -588,7 +627,9 @@ def main():
                         print("try again")
 
             else:
-                C4.drop(agent.player, agent.getMove(C4.getCurrentBoard()))
+                mv = agent.getMove(C4.getCurrentBoard())
+                C4.drop(agent.player, mv)
+                print("Move: " + str(mv))
                 ply += 1
 
             player, terminal = checkWin(C4.getCurrentBoard())
@@ -610,10 +651,14 @@ def main():
             C4.displayBoard()
 
             if (ply % 2) == 0:
-                C4.drop(agent1.player, agent1.getMove(C4.getCurrentBoard()))
+                mv = agent1.getMove(C4.getCurrentBoard())
+                C4.drop(agent1.player, mv)
+                print("Move: " + str(mv))
                 ply += 1
             else:
-                C4.drop(agent2.player, agent2.getMove(C4.getCurrentBoard()))
+                mv = agent2.getMove(C4.getCurrentBoard())
+                C4.drop(agent2.player, mv)
+                print("Move: " + str(mv))
                 ply += 1
 
             player, terminal = checkWin(C4.getCurrentBoard())
